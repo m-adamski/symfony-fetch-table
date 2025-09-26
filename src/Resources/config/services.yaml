@@ -1,0 +1,36 @@
+services:
+    # Adapters
+    Adamski\Bundle\FetchTableBundle\Adapter\ArrayAdapter:
+        tags: [ 'm_adamski_fetch_table.adapter' ]
+
+    Adamski\Bundle\FetchTableBundle\Adapter\CallableAdapter:
+        tags: [ 'm_adamski_fetch_table.adapter' ]
+
+    Adamski\Bundle\FetchTableBundle\Adapter\Doctrine\RepositoryAdapter:
+        arguments:
+            - '@doctrine'
+        tags: [ 'm_adamski_fetch_table.adapter' ]
+
+    # Columns
+    Adamski\Bundle\FetchTableBundle\Column\CallableColumn:
+        tags: [ 'm_adamski_fetch_table.column' ]
+
+    Adamski\Bundle\FetchTableBundle\Column\DateTimeColumn:
+        tags: [ 'm_adamski_fetch_table.column' ]
+
+    Adamski\Bundle\FetchTableBundle\Column\PropertyColumn:
+        tags: [ 'm_adamski_fetch_table.column' ]
+
+    Adamski\Bundle\FetchTableBundle\Column\TextColumn:
+        tags: [ 'm_adamski_fetch_table.column' ]
+
+    Adamski\Bundle\FetchTableBundle\Column\Twig\TwigColumn:
+        arguments:
+            - '@twig'
+        tags: [ 'm_adamski_fetch_table.column' ]
+
+    # Other
+    Adamski\Bundle\FetchTableBundle\DependencyInjection\InstanceStorage:
+    Adamski\Bundle\FetchTableBundle\FetchTableFactory:
+        arguments:
+            - '@Adamski\Bundle\FetchTableBundle\DependencyInjection\InstanceStorage'

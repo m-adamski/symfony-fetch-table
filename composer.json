@@ -1,0 +1,41 @@
+{
+    "name": "m-adamski/symfony-fetch-table",
+    "description": "The Symfony bundle for interaction with the JS Fetch Table library",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Maciej Adamski",
+            "email": "m.adamski@ideacode.pl"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=8.2",
+        "symfony/framework-bundle": "^7.3",
+        "symfony/options-resolver": "^7.3",
+        "symfony/property-access": "^7.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5",
+        "symfony/orm-pack": "^2.4",
+        "symfony/twig-bundle": "^7.3"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "Adamski\\Bundle\\FetchTableBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Adamski\\Bundle\\FetchTableBundleTests\\": "tests/"
+        }
+    },
+    "suggest": {
+        "symfony/orm-pack": "To use the RepositoryAdapter",
+        "symfony/twig-bundle": "To use the TwigColumn"
+    }
+}
