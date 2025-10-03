@@ -6,6 +6,7 @@ use Adamski\Bundle\FetchTableBundle\Column\AbstractColumn;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Direction;
+use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class ArrayAdapter extends AbstractAdapter {
@@ -13,7 +14,7 @@ class ArrayAdapter extends AbstractAdapter {
         $resolver->define("data")->allowedTypes("array")->required();
     }
 
-    public function fetchData(Query $query, array $columns, array $config): Result {
+    public function fetchData(Query $query, TransformerInterface $transformer, array $columns, array $config): Result {
         $data = $this->config["data"];
 
         // Searching
@@ -69,10 +70,10 @@ class ArrayAdapter extends AbstractAdapter {
                 ->setPage($pagination->getPage())
                 ->setPageSize($pagination->getSize())
                 ->setTotalPages($pages)
-                ->setData($this->convertData($data, $columns));
+                ->setData($transformer->transform($data, $columns));
         }
 
         return (new Result())
-            ->setData($this->convertData($data, $columns));
+            ->setData($transformer->transform($data, $columns));
     }
 }

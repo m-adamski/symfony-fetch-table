@@ -9,6 +9,7 @@ use Adamski\Bundle\FetchTableBundle\Model\Pagination\Pagination;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Direction;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Sort;
+use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -23,6 +24,7 @@ class FetchTable {
     public function __construct(
         private readonly string          $selector,
         private readonly InstanceStorage $instanceStorage,
+        private TransformerInterface     $transformer,
     ) {}
 
     /**
@@ -313,6 +315,26 @@ class FetchTable {
     }
 
     /**
+     * Get transformer.
+     *
+     * @return TransformerInterface
+     */
+    public function getTransformer(): TransformerInterface {
+        return $this->transformer;
+    }
+
+    /**
+     * Set transformer.
+     *
+     * @param TransformerInterface $transformer
+     * @return $this
+     */
+    public function setTransformer(TransformerInterface $transformer): FetchTable {
+        $this->transformer = $transformer;
+        return $this;
+    }
+
+    /**
      * Handles an incoming Request and returns the JsonResponse if specific conditions are met.
      *
      * This method uses the Symfony PropertyAccess component to retrieve configuration values
@@ -368,7 +390,7 @@ class FetchTable {
                 }
 
                 // Fetch data from the adapter based on the generated query
-                if (null !== ($adapterData = $this->getAdapter()?->fetchData($adapterQuery, $this->getColumns(), $this->getConfig()))) {
+                if (null !== ($adapterData = $this->getAdapter()?->fetchData($adapterQuery, $this->getTransformer(), $this->getColumns(), $this->getConfig()))) {
                     return new JsonResponse(
                         $adapterData->parseResponse($configPaginationActive)
                     );

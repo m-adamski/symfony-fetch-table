@@ -10,13 +10,16 @@ use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Direction;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Sort;
+use Adamski\Bundle\FetchTableBundle\Transformer\PropertyTransformer;
 use PHPUnit\Framework\TestCase;
 
 class ArrayAdapterTest extends TestCase {
     private ArrayAdapter $arrayAdapter;
+    private PropertyTransformer $propertyTransformer;
     private array $columns = [];
 
     protected function setUp(): void {
+        $this->propertyTransformer = new PropertyTransformer();
         $this->arrayAdapter = new ArrayAdapter();
         $this->arrayAdapter->setConfig([
             "data" => [
@@ -64,7 +67,7 @@ class ArrayAdapterTest extends TestCase {
 
     public function testFetchDataWithEmptyQuery(): void {
         $query = new Query();
-        $fetchResult = $this->arrayAdapter->fetchData($query, $this->columns, []);
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
         $expectedResult = (new Result())
             ->setData([
@@ -79,7 +82,7 @@ class ArrayAdapterTest extends TestCase {
 
     public function testFetchDataWithSortByNameQuery(): void {
         $query = (new Query())->setSort(new Sort("name", Direction::ASC));
-        $fetchResult = $this->arrayAdapter->fetchData($query, $this->columns, []);
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
         $expectedResult = (new Result())
             ->setData([
@@ -94,7 +97,7 @@ class ArrayAdapterTest extends TestCase {
 
     public function testFetchDataWithSortByAgeQuery(): void {
         $query = (new Query())->setSort(new Sort("age", Direction::DESC));
-        $fetchResult = $this->arrayAdapter->fetchData($query, $this->columns, []);
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
         $expectedResult = (new Result())
             ->setData([
@@ -111,13 +114,13 @@ class ArrayAdapterTest extends TestCase {
         $this->expectException(\RuntimeException::class);
 
         $query = (new Query())->setSort(new Sort("emailAddress", Direction::DESC));
-        $fetchResult = $this->arrayAdapter->fetchData($query, $this->columns, []);
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
     }
 
     public function testFetchDataWithSearchQuery(): void {
         $query = (new Query())
             ->setSearch("dav");
-        $fetchResult = $this->arrayAdapter->fetchData($query, $this->columns, []);
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
         $expectedResult = (new Result())
             ->setData([
@@ -130,7 +133,7 @@ class ArrayAdapterTest extends TestCase {
 
     public function testFetchDataWithPaginationQuery(): void {
         $query = (new Query())->setPagination(new Pagination(1, 2));
-        $fetchResult = $this->arrayAdapter->fetchData($query, $this->columns, []);
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
         $expectedResult = (new Result())
             ->setPage(1)

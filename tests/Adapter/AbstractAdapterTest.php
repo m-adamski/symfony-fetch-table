@@ -5,6 +5,7 @@ namespace Adamski\Bundle\FetchTableBundleTests\Adapter;
 use Adamski\Bundle\FetchTableBundle\Adapter\AbstractAdapter;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
+use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -20,7 +21,8 @@ class AbstractAdapterTest extends TestCase {
                 $resolver->define("adapter")->allowedTypes("string")->required();
             }
 
-            public function fetchData(Query $query, array $columns, array $config): Result {
+
+            public function fetchData(Query $query, TransformerInterface $transformer, array $columns, array $config): Result {
                 return new Result();
             }
         };

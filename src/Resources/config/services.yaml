@@ -31,6 +31,8 @@ services:
 
     # Other
     Adamski\Bundle\FetchTableBundle\DependencyInjection\InstanceStorage:
+    Adamski\Bundle\FetchTableBundle\Transformer\PropertyTransformer:
     Adamski\Bundle\FetchTableBundle\FetchTableFactory:
         arguments:
             - '@Adamski\Bundle\FetchTableBundle\DependencyInjection\InstanceStorage'
+            - '@Adamski\Bundle\FetchTableBundle\Transformer\PropertyTransformer'

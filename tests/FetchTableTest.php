@@ -4,6 +4,7 @@ namespace Adamski\Bundle\FetchTableBundleTests;
 
 use Adamski\Bundle\FetchTableBundle\DependencyInjection\InstanceStorage;
 use Adamski\Bundle\FetchTableBundle\FetchTable;
+use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use PHPUnit\Framework\TestCase;
 
 class FetchTableTest extends TestCase {
@@ -37,9 +38,10 @@ class FetchTableTest extends TestCase {
 
     protected function setUp(): void {
         $instanceStorage = $this->createMock(InstanceStorage::class);
+        $transformerMock = $this->createMock(TransformerInterface::class);
 
         // Create an instance of FetchTable
-        $this->fetchTable = new FetchTable("#example", $instanceStorage);
+        $this->fetchTable = new FetchTable("#example", $instanceStorage, $transformerMock);
         $this->fetchTable->setConfig($this->defaultConfig);
     }
 

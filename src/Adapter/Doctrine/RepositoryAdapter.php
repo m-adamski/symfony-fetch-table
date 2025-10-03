@@ -6,6 +6,7 @@ use Adamski\Bundle\FetchTableBundle\Adapter\AbstractAdapter;
 use Adamski\Bundle\FetchTableBundle\Column\AbstractColumn;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
+use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
@@ -25,7 +26,7 @@ class RepositoryAdapter extends AbstractAdapter {
         $resolver->define("queryBuilder")->allowedTypes("callable")->required();
     }
 
-    public function fetchData(Query $query, array $columns, array $config): Result {
+    public function fetchData(Query $query, TransformerInterface $transformer, array $columns, array $config): Result {
         $entityClass = $this->getConfig("[entity]");
         $queryBuilder = $this->getConfig("[queryBuilder]");
         $entityRepository = $this->managerRegistry?->getManagerForClass($entityClass)?->getRepository($entityClass);
@@ -93,13 +94,13 @@ class RepositoryAdapter extends AbstractAdapter {
                 ->setPageSize($pagination->getSize())
                 ->setTotalPages(ceil($queryPaginator->count() / $pagination->getSize()))
                 ->setData(
-                    $this->convertData($queryResult, $columns)
+                    $transformer->transform($queryResult, $columns)
                 );
         }
-        
+
         return (new Result())
             ->setData(
-                $this->convertData(
+                $transformer->transform(
                     $queryBuilder->getQuery()->getResult(), $columns
                 )
             );

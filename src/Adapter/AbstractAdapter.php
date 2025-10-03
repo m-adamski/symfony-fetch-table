@@ -3,9 +3,9 @@
 namespace Adamski\Bundle\FetchTableBundle\Adapter;
 
 use Adamski\Bundle\FetchTableBundle\Column\AbstractColumn;
-use Adamski\Bundle\FetchTableBundle\Model\Column;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
+use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -50,42 +50,6 @@ abstract class AbstractAdapter {
     }
 
     /**
-     * Convert the provided array with data to the array of Column objects.
-     *
-     * @param array $data
-     * @param array $columns
-     * @return array
-     */
-    protected function convertData(array $data, array $columns): array {
-        $resultData = [];
-        foreach ($data as $item) {
-            $columnRow = [];
-
-            /**
-             * @var string         $columnName
-             * @var AbstractColumn $column
-             */
-            foreach ($columns as $columnName => $column) {
-                $isMapped = $column->getConfig("[mapped]");
-                $isExpanded = $column->getConfig("[expanded]") ?? false;
-
-                // Define property path and value
-                $propertyPath = is_array($item) ? "[$columnName]" : $columnName;
-                $propertyValue = $isMapped ? ($isExpanded ? $item : $this->getPropertyAccessor()->getValue($item, $propertyPath)) : ($isExpanded ? $item : null);
-
-                $columnRow[] = new Column(
-                    name: $columnName,
-                    value: $column->render($propertyValue)
-                );
-            }
-
-            $resultData[] = $columnRow;
-        }
-
-        return $resultData;
-    }
-
-    /**
      * Create and return the PropertyAccessor.
      *
      * @return PropertyAccessorInterface
@@ -110,10 +74,11 @@ abstract class AbstractAdapter {
      * Retrieve data from the designated source.
      * This method is implemented by derived classes to fetch specific data sets.
      *
-     * @param Query            $query
-     * @param AbstractColumn[] $columns
-     * @param array            $config
+     * @param Query                $query
+     * @param TransformerInterface $transformer
+     * @param AbstractColumn[]     $columns
+     * @param array                $config
      * @return Result
      */
-    public abstract function fetchData(Query $query, array $columns, array $config): Result;
+    public abstract function fetchData(Query $query, TransformerInterface $transformer, array $columns, array $config): Result;
 }
