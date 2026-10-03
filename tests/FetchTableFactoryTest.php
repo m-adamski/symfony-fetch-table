@@ -11,8 +11,8 @@ use Symfony\Component\OptionsResolver\Exception\MissingOptionsException;
 
 class FetchTableFactoryTest extends TestCase {
     public function testCreateReturnsFetchTableInstance(): void {
-        $instanceStorage = $this->createMock(InstanceStorage::class);
-        $transformerMock = $this->createMock(TransformerInterface::class);
+        $instanceStorage = $this->createStub(InstanceStorage::class);
+        $transformerMock = $this->createStub(TransformerInterface::class);
         $factory = new FetchTableFactory($instanceStorage, $transformerMock);
 
         $fetchTable = $factory->create("#example", [
@@ -25,8 +25,8 @@ class FetchTableFactoryTest extends TestCase {
     public function testCreateThrowsMissingOptionsException(): void {
         $this->expectException(MissingOptionsException::class);
 
-        $instanceStorage = $this->createMock(InstanceStorage::class);
-        $transformerMock = $this->createMock(TransformerInterface::class);
+        $instanceStorage = $this->createStub(InstanceStorage::class);
+        $transformerMock = $this->createStub(TransformerInterface::class);
         $factory = new FetchTableFactory($instanceStorage, $transformerMock);
 
         $fetchTable = $factory->create("#example", []);

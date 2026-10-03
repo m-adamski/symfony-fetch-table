@@ -60,8 +60,11 @@ class RepositoryAdapter extends AbstractAdapter {
                 }
             }
 
-            $queryBuilder->andWhere($orX)
-                ->setParameter("searchContent", "%$searchContent%");
+            // Check if there are any searchable columns, then add the OR condition to the query
+            if ($orX->count() > 0) {
+                $queryBuilder->andWhere($orX)
+                    ->setParameter("searchContent", "%$searchContent%");
+            }
         }
 
         // Sorting

@@ -37,8 +37,8 @@ class FetchTableTest extends TestCase {
     ];
 
     protected function setUp(): void {
-        $instanceStorage = $this->createMock(InstanceStorage::class);
-        $transformerMock = $this->createMock(TransformerInterface::class);
+        $instanceStorage = $this->createStub(InstanceStorage::class);
+        $transformerMock = $this->createStub(TransformerInterface::class);
 
         // Create an instance of FetchTable
         $this->fetchTable = new FetchTable("#example", $instanceStorage, $transformerMock);
