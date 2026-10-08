@@ -215,6 +215,14 @@ class FetchTable {
                         $resolver->define("attributes")->allowedTypes("array");
                     });
                 });
+
+                // Elements > Pagination > Description
+                $resolver->define("description")->options(function (OptionsResolver $resolver) {
+                    $resolver->define("container")->options(function (OptionsResolver $resolver) {
+                        $resolver->define("className")->allowedTypes("string");
+                        $resolver->define("attributes")->allowedTypes("array");
+                    });
+                });
             });
 
             // Elements > Search
@@ -237,6 +245,10 @@ class FetchTable {
                 $resolver->define("pageSize")->allowedTypes("int")->default(25);
                 $resolver->define("availableSizes")->allowedTypes("array")->default([10, 25, 50, 100]);
                 $resolver->define("style")->allowedValues("standard", "simple")->default("standard");
+                $resolver->define("description")->options(function (OptionsResolver $resolver) {
+                    $resolver->define("active")->allowedTypes("boolean")->default(true);
+                    $resolver->define("innerHTML")->allowedTypes("string");
+                });
             });
 
             // Components > Search

@@ -48,13 +48,13 @@ class ArrayAdapterTest extends TestCase {
         ]);
 
         // Define columns
-        $nameColumn = (new TextColumn())
+        $nameColumn = new TextColumn()
             ->setConfig(["label" => "Name", "sortable" => true, "searchable" => true]);
-        $emailColumn = (new TextColumn())
+        $emailColumn = new TextColumn()
             ->setConfig(["label" => "Email Address", "sortable" => false, "searchable" => true]);
-        $ageColumn = (new TextColumn())
+        $ageColumn = new TextColumn()
             ->setConfig(["label" => "Age", "sortable" => true, "searchable" => true]);
-        $cityColumn = (new TextColumn())
+        $cityColumn = new TextColumn()
             ->setConfig(["label" => "City", "sortable" => true, "searchable" => false]);
 
         $this->columns = [
@@ -69,43 +69,46 @@ class ArrayAdapterTest extends TestCase {
         $query = new Query();
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
-        $expectedResult = (new Result())
+        $expectedResult = new Result()
             ->setData([
                 [new Column("name", "John Doe"), new Column("emailAddress", "john.doe@example.com"), new Column("age", 32), new Column("city", "New York")],
                 [new Column("name", "Michael Brown"), new Column("emailAddress", "michael.brown@example.com"), new Column("age", 45), new Column("city", "Chicago")],
                 [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
                 [new Column("name", "David Wilson"), new Column("emailAddress", "david.wilson@example.com"), new Column("age", 37), new Column("city", "Phoenix")],
-            ]);
+            ])
+            ->setTotalRecords(4);
 
         $this->assertEquals($expectedResult, $fetchResult);
     }
 
     public function testFetchDataWithSortByNameQuery(): void {
-        $query = (new Query())->setSort(new Sort("name", Direction::ASC));
+        $query = new Query()->setSort(new Sort("name", Direction::ASC));
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
-        $expectedResult = (new Result())
+        $expectedResult = new Result()
             ->setData([
                 [new Column("name", "David Wilson"), new Column("emailAddress", "david.wilson@example.com"), new Column("age", 37), new Column("city", "Phoenix")],
                 [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
                 [new Column("name", "John Doe"), new Column("emailAddress", "john.doe@example.com"), new Column("age", 32), new Column("city", "New York")],
                 [new Column("name", "Michael Brown"), new Column("emailAddress", "michael.brown@example.com"), new Column("age", 45), new Column("city", "Chicago")],
-            ]);
+            ])
+            ->setTotalRecords(4);
 
         $this->assertEquals($expectedResult, $fetchResult);
     }
 
     public function testFetchDataWithSortByAgeQuery(): void {
-        $query = (new Query())->setSort(new Sort("age", Direction::DESC));
+        $query = new Query()->setSort(new Sort("age", Direction::DESC));
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
-        $expectedResult = (new Result())
+        $expectedResult = new Result()
             ->setData([
                 [new Column("name", "Michael Brown"), new Column("emailAddress", "michael.brown@example.com"), new Column("age", 45), new Column("city", "Chicago")],
                 [new Column("name", "David Wilson"), new Column("emailAddress", "david.wilson@example.com"), new Column("age", 37), new Column("city", "Phoenix")],
                 [new Column("name", "John Doe"), new Column("emailAddress", "john.doe@example.com"), new Column("age", 32), new Column("city", "New York")],
                 [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
-            ]);
+            ])
+            ->setTotalRecords(4);
 
         $this->assertEquals($expectedResult, $fetchResult);
     }
@@ -113,36 +116,38 @@ class ArrayAdapterTest extends TestCase {
     public function testFetchDataWithSortByNotSortableColumnQuery(): void {
         $this->expectException(\RuntimeException::class);
 
-        $query = (new Query())->setSort(new Sort("emailAddress", Direction::DESC));
+        $query = new Query()->setSort(new Sort("emailAddress", Direction::DESC));
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
     }
 
     public function testFetchDataWithSearchQuery(): void {
-        $query = (new Query())
+        $query = new Query()
             ->setSearch("dav");
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
-        $expectedResult = (new Result())
+        $expectedResult = new Result()
             ->setData([
                 [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
                 [new Column("name", "David Wilson"), new Column("emailAddress", "david.wilson@example.com"), new Column("age", 37), new Column("city", "Phoenix")],
-            ]);
+            ])
+            ->setTotalRecords(2);
 
         $this->assertEquals($expectedResult, $fetchResult);
     }
 
     public function testFetchDataWithPaginationQuery(): void {
-        $query = (new Query())->setPagination(new Pagination(1, 2));
+        $query = new Query()->setPagination(new Pagination(1, 2));
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
-        $expectedResult = (new Result())
+        $expectedResult = new Result()
             ->setPage(1)
             ->setPageSize(2)
             ->setTotalPages(2)
             ->setData([
                 [new Column("name", "John Doe"), new Column("emailAddress", "john.doe@example.com"), new Column("age", 32), new Column("city", "New York")],
                 [new Column("name", "Michael Brown"), new Column("emailAddress", "michael.brown@example.com"), new Column("age", 45), new Column("city", "Chicago")],
-            ]);
+            ])
+            ->setTotalRecords(4);
 
         $this->assertEquals($expectedResult, $fetchResult);
     }

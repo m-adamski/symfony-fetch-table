@@ -8,7 +8,8 @@ use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
 use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use Doctrine\ORM\QueryBuilder;
-use Doctrine\ORM\Tools\Pagination\Paginator;
+use Doctrine\ORM\Tools\Pagination\OffsetPaginator;
+use Doctrine\ORM\Tools\Pagination\Window;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -60,11 +61,8 @@ class RepositoryAdapter extends AbstractAdapter {
                 }
             }
 
-            // Check if there are any searchable columns, then add the OR condition to the query
-            if ($orX->count() > 0) {
-                $queryBuilder->andWhere($orX)
-                    ->setParameter("searchContent", "%$searchContent%");
-            }
+            $queryBuilder->andWhere($orX)
+                ->setParameter("searchContent", "%$searchContent%");
         }
 
         // Sorting
@@ -85,27 +83,22 @@ class RepositoryAdapter extends AbstractAdapter {
 
         // Pagination
         if (null !== ($pagination = $query->getPagination())) {
-            $queryBuilder
-                ->setFirstResult($query->getPagination()->getSize() * $query->getPagination()->getPage() - $query->getPagination()->getSize())
-                ->setMaxResults($query->getPagination()->getSize());
 
-            $queryPaginator = new Paginator($queryBuilder);
-            $queryResult = $queryBuilder->getQuery()->getResult();
+            // Use OffsetPaginator
+            // https://www.doctrine-project.org/projects/doctrine-orm/en/3.7/tutorials/pagination.html
+            $queryPaginator = new OffsetPaginator()
+                ->paginate($queryBuilder, Window::fromPageNumberAndSize($pagination->getPage(), $pagination->getSize()));
 
-            return (new Result())
-                ->setPage($pagination->getPage())
+            return new Result()
+                ->setPage($queryPaginator->getPageNumber())
                 ->setPageSize($pagination->getSize())
-                ->setTotalPages(ceil($queryPaginator->count() / $pagination->getSize()))
-                ->setData(
-                    $transformer->transform($queryResult, $columns)
-                );
+                ->setTotalPages($queryPaginator->getPageCount())
+                ->setData($transformer->transform($queryPaginator->getItems(), $columns))
+                ->setTotalRecords($queryPaginator->getTotalCount());
         }
 
-        return (new Result())
-            ->setData(
-                $transformer->transform(
-                    $queryBuilder->getQuery()->getResult(), $columns
-                )
-            );
+        return new Result()
+            ->setData($transformer->transform($queryBuilder->getQuery()->getResult(), $columns))
+            ->setTotalRecords(count($queryBuilder->getQuery()->getResult()));
     }
 }

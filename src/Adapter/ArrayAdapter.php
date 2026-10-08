@@ -66,14 +66,16 @@ class ArrayAdapter extends AbstractAdapter {
             $pages = ceil($total / $pagination->getSize());
             $data = array_slice($data, ($pagination->getPage() - 1) * $pagination->getSize(), $pagination->getSize());
 
-            return (new Result())
+            return new Result()
                 ->setPage($pagination->getPage())
                 ->setPageSize($pagination->getSize())
                 ->setTotalPages($pages)
-                ->setData($transformer->transform($data, $columns));
+                ->setData($transformer->transform($data, $columns))
+                ->setTotalRecords($total);
         }
 
-        return (new Result())
-            ->setData($transformer->transform($data, $columns));
+        return new Result()
+            ->setData($transformer->transform($data, $columns))
+            ->setTotalRecords(count($data));
     }
 }

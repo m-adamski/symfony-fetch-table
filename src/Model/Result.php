@@ -6,6 +6,7 @@ class Result {
     private int $page;
     private int $pageSize;
     private int $totalPages;
+    private int $totalRecords;
     private array $data;
 
     public function getPage(): int {
@@ -35,6 +36,15 @@ class Result {
         return $this;
     }
 
+    public function getTotalRecords(): int {
+        return $this->totalRecords;
+    }
+
+    public function setTotalRecords(int $totalRecords): Result {
+        $this->totalRecords = $totalRecords;
+        return $this;
+    }
+
     public function getData(): array {
         return $this->data;
     }
@@ -61,7 +71,10 @@ class Result {
         });
 
         // Prepare response
-        $parseResponse = ["data" => $responseData];
+        $parseResponse = [
+            "data"         => $responseData,
+            "totalRecords" => $this->getTotalRecords(),
+        ];
 
         if ($isPagination) {
             $parseResponse["pagination"] = [

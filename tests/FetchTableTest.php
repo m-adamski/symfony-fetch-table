@@ -29,6 +29,9 @@ class FetchTableTest extends TestCase {
                     3 => 100
                 ],
                 "style"          => "standard",
+                "description"    => [
+                    "active" => true
+                ]
             ],
             "search"     => [
                 "active" => false
