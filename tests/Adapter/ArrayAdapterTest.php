@@ -5,6 +5,7 @@ namespace Adamski\Bundle\FetchTableBundleTests\Adapter;
 use Adamski\Bundle\FetchTableBundle\Adapter\ArrayAdapter;
 use Adamski\Bundle\FetchTableBundle\Column\TextColumn;
 use Adamski\Bundle\FetchTableBundle\Model\Column;
+use Adamski\Bundle\FetchTableBundle\Model\Filter\Filter;
 use Adamski\Bundle\FetchTableBundle\Model\Pagination\Pagination;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Result;
@@ -49,13 +50,13 @@ class ArrayAdapterTest extends TestCase {
 
         // Define columns
         $nameColumn = new TextColumn()
-            ->setConfig(["label" => "Name", "sortable" => true, "searchable" => true]);
+            ->setConfig(["label" => "Name", "sortable" => true, "searchable" => true, "filterable" => false]);
         $emailColumn = new TextColumn()
-            ->setConfig(["label" => "Email Address", "sortable" => false, "searchable" => true]);
+            ->setConfig(["label" => "Email Address", "sortable" => false, "searchable" => true, "filterable" => false]);
         $ageColumn = new TextColumn()
-            ->setConfig(["label" => "Age", "sortable" => true, "searchable" => true]);
+            ->setConfig(["label" => "Age", "sortable" => true, "searchable" => true, "filterable" => true]);
         $cityColumn = new TextColumn()
-            ->setConfig(["label" => "City", "sortable" => true, "searchable" => false]);
+            ->setConfig(["label" => "City", "sortable" => true, "searchable" => false, "filterable" => true]);
 
         $this->columns = [
             "name"         => $nameColumn,
@@ -122,7 +123,7 @@ class ArrayAdapterTest extends TestCase {
 
     public function testFetchDataWithSearchQuery(): void {
         $query = new Query()
-            ->setSearch("dav");
+            ->setSearchQuery("dav");
         $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
 
         $expectedResult = new Result()
@@ -148,6 +149,91 @@ class ArrayAdapterTest extends TestCase {
                 [new Column("name", "Michael Brown"), new Column("emailAddress", "michael.brown@example.com"), new Column("age", 45), new Column("city", "Chicago")],
             ])
             ->setTotalRecords(4);
+
+        $this->assertEquals($expectedResult, $fetchResult);
+    }
+
+    public function testFetchDataWithSingleFilterQuery(): void {
+        $query = new Query();
+        $query->addFilter(new Filter("city", "Houston"));
+
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
+
+        $expectedResult = new Result()
+            ->setData([
+                [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
+            ])
+            ->setTotalRecords(1);
+
+        $this->assertEquals($expectedResult, $fetchResult);
+    }
+
+    public function testFetchDataWithMultipleFiltersQuery(): void {
+        $query = new Query();
+        $query->addFilter(new Filter("city", "New York"));
+        $query->addFilter(new Filter("age", 32));
+
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
+
+        $expectedResult = new Result()
+            ->setData([
+                [new Column("name", "John Doe"), new Column("emailAddress", "john.doe@example.com"), new Column("age", 32), new Column("city", "New York")],
+            ])
+            ->setTotalRecords(1);
+
+        $this->assertEquals($expectedResult, $fetchResult);
+    }
+
+    public function testFetchDataWithMultipleFiltersReturningNoResults(): void {
+        $query = new Query();
+        $query->addFilter(new Filter("city", "New York"));
+        $query->addFilter(new Filter("age", 45));
+
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
+
+        $expectedResult = new Result()
+            ->setData([])
+            ->setTotalRecords(0);
+
+        $this->assertEquals($expectedResult, $fetchResult);
+    }
+
+    public function testFetchDataWithNotFilterableColumnQuery(): void {
+        $query = new Query();
+        // emailAddress is configured with filterable => false
+        $query->addFilter(new Filter("emailAddress", "john.doe@example.com"));
+
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
+
+        $expectedResult = new Result()
+            ->setData([
+                [new Column("name", "John Doe"), new Column("emailAddress", "john.doe@example.com"), new Column("age", 32), new Column("city", "New York")],
+                [new Column("name", "Michael Brown"), new Column("emailAddress", "michael.brown@example.com"), new Column("age", 45), new Column("city", "Chicago")],
+                [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
+                [new Column("name", "David Wilson"), new Column("emailAddress", "david.wilson@example.com"), new Column("age", 37), new Column("city", "Phoenix")],
+            ])
+            ->setTotalRecords(4);
+
+        $this->assertEquals($expectedResult, $fetchResult);
+    }
+
+    public function testFetchDataWithFilterAndSearchAndSortAndPagination(): void {
+        $query = new Query();
+        $query->addFilter(new Filter("age", 31));
+        $query->setSearchQuery("emily");
+        $query->setSort(new Sort("name", Direction::ASC));
+        $query->setPagination(new Pagination(1, 10));
+
+        $fetchResult = $this->arrayAdapter->fetchData($query, $this->propertyTransformer, $this->columns, []);
+
+        $expectedResult = new Result()
+            ->setPage(1)
+            ->setPageSize(10)
+            ->setTotalPages(1)
+            ->setData([
+                [new Column("name", "Emily Davis"), new Column("emailAddress", "emily.davis@example.com"), new Column("age", 31), new Column("city", "Houston")],
+            ])
+            ->setTotalRecords(1);
 
         $this->assertEquals($expectedResult, $fetchResult);
     }

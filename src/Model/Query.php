@@ -2,22 +2,45 @@
 
 namespace Adamski\Bundle\FetchTableBundle\Model;
 
+use Adamski\Bundle\FetchTableBundle\Model\Filter\Filter;
 use Adamski\Bundle\FetchTableBundle\Model\Pagination\Pagination;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Sort;
 
 class Query {
     public function __construct(
-        private ?string     $search = null,
+        private array       $filters = [],
+        private ?string     $searchQuery = null,
         private ?Sort       $sort = null,
         private ?Pagination $pagination = null,
     ) {}
 
-    public function getSearch(): ?string {
-        return $this->search;
+    /**
+     * @return Filter[]
+     */
+    public function getFilters(): array {
+        return $this->filters;
     }
 
-    public function setSearch(?string $search): Query {
-        $this->search = $search;
+    /**
+     * @param Filter[] $filters
+     * @return $this
+     */
+    public function setFilters(array $filters): Query {
+        $this->filters = $filters;
+        return $this;
+    }
+
+    public function addFilter(Filter $filter): Query {
+        $this->filters[] = $filter;
+        return $this;
+    }
+
+    public function getSearchQuery(): ?string {
+        return $this->searchQuery;
+    }
+
+    public function setSearchQuery(?string $searchQuery): Query {
+        $this->searchQuery = $searchQuery;
         return $this;
     }
 

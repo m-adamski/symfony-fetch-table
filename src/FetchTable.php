@@ -5,6 +5,7 @@ namespace Adamski\Bundle\FetchTableBundle;
 use Adamski\Bundle\FetchTableBundle\Adapter\AbstractAdapter;
 use Adamski\Bundle\FetchTableBundle\Column\AbstractColumn;
 use Adamski\Bundle\FetchTableBundle\DependencyInjection\InstanceStorage;
+use Adamski\Bundle\FetchTableBundle\Model\Filter\Filter;
 use Adamski\Bundle\FetchTableBundle\Model\Pagination\Pagination;
 use Adamski\Bundle\FetchTableBundle\Model\Query;
 use Adamski\Bundle\FetchTableBundle\Model\Sort\Direction;
@@ -12,6 +13,7 @@ use Adamski\Bundle\FetchTableBundle\Model\Sort\Sort;
 use Adamski\Bundle\FetchTableBundle\Transformer\TransformerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -52,8 +54,9 @@ class FetchTable {
                     "type"       => $column->getConfig("[type]"),
                     "label"      => $column->getConfig("[label]"),
                     "className"  => $column->getConfig("[className]"),
-                    "sortable"   => $column->getConfig("[sortable]"),
+                    "filterable" => $column->getConfig("[filterable]"),
                     "searchable" => $column->getConfig("[searchable]"),
+                    "sortable"   => $column->getConfig("[sortable]"),
                 ];
             }, $this->columns),
         ]);
@@ -175,7 +178,7 @@ class FetchTable {
 
                 // Elements > Pagination > Button
                 $resolver->define("button")->options(function (OptionsResolver $resolver) {
-                    $resolver->define("primary")->options(function (OptionsResolver $resolver) {
+                    $resolver->define("default")->options(function (OptionsResolver $resolver) {
                         $resolver->define("className")->allowedTypes("string");
                         $resolver->define("attributes")->allowedTypes("array");
                     });
@@ -236,6 +239,50 @@ class FetchTable {
                     $resolver->define("attributes")->allowedTypes("array");
                 });
             });
+
+            // Elements > Filter
+            $resolver->define("filter")->options(function (OptionsResolver $resolver) {
+                $resolver->define("container")->options(function (OptionsResolver $resolver) {
+                    $resolver->define("className")->allowedTypes("string");
+                    $resolver->define("attributes")->allowedTypes("array");
+                });
+                $resolver->define("item")->options(function (OptionsResolver $resolver) {
+                    $resolver->define("container")->options(function (OptionsResolver $resolver) {
+                        $resolver->define("className")->allowedTypes("string");
+                        $resolver->define("attributes")->allowedTypes("array");
+                    });
+                    $resolver->define("label")->options(function (OptionsResolver $resolver) {
+                        $resolver->define("className")->allowedTypes("string");
+                        $resolver->define("attributes")->allowedTypes("array");
+                    });
+                    $resolver->define("select")->options(function (OptionsResolver $resolver) {
+                        $resolver->define("select")->options(function (OptionsResolver $resolver) {
+                            $resolver->define("className")->allowedTypes("string");
+                            $resolver->define("attributes")->allowedTypes("array");
+                        });
+                        $resolver->define("option")->options(function (OptionsResolver $resolver) {
+                            $resolver->define("className")->allowedTypes("string");
+                            $resolver->define("attributes")->allowedTypes("array");
+                        });
+                    });
+                    $resolver->define("button")->options(function (OptionsResolver $resolver) {
+                        $resolver->define("container")->options(function (OptionsResolver $resolver) {
+                            $resolver->define("className")->allowedTypes("string");
+                            $resolver->define("attributes")->allowedTypes("array");
+                        });
+                        $resolver->define("button")->options(function (OptionsResolver $resolver) {
+                            $resolver->define("default")->options(function (OptionsResolver $resolver) {
+                                $resolver->define("className")->allowedTypes("string");
+                                $resolver->define("attributes")->allowedTypes("array");
+                            });
+                            $resolver->define("active")->options(function (OptionsResolver $resolver) {
+                                $resolver->define("className")->allowedTypes("string");
+                                $resolver->define("attributes")->allowedTypes("array");
+                            });
+                        });
+                    });
+                });
+            });
         });
         $configResolver->define("components")->options(function (OptionsResolver $resolver) {
 
@@ -254,6 +301,37 @@ class FetchTable {
             // Components > Search
             $resolver->define("search")->options(function (OptionsResolver $resolver) {
                 $resolver->define("active")->allowedTypes("boolean")->default(false);
+            });
+
+            // Components > Filter
+            $resolver->define("filter")->options(function (OptionsResolver $resolver) {
+                $resolver->define("active")->allowedTypes("boolean")->default(false);
+                $resolver->define("allLabel")->allowedTypes("string");
+
+                $resolver->define("filters")->allowedTypes("array")
+                    ->normalize(function (Options $options, array $filters): array {
+                        if (!array_is_list($filters)) {
+                            throw new \InvalidArgumentException("The option 'filters' must be a list of filter objects.");
+                        }
+
+                        return array_map(function (array $filter): array {
+                            $filterResolver = new OptionsResolver();
+
+                            $filterResolver->define("columnName")->allowedTypes("string")->required();
+                            $filterResolver->define("label")->allowedTypes("string");
+                            $filterResolver->define("type")->allowedValues("button", "select")->required();
+                            $filterResolver->define("values")->allowedTypes("array")
+                                ->allowedValues(function (array $values): bool {
+                                    if (!array_is_list($values)) {
+                                        return false;
+                                    }
+
+                                    return array_all($values, fn($value) => null === $value || is_string($value));
+                                })->required();
+
+                            return $filterResolver->resolve($filter);
+                        }, $filters);
+                    });
             });
         });
 
@@ -376,19 +454,26 @@ class FetchTable {
                 // Parse request looking for filter, pagination and search parameters
                 $adapterQuery = new Query();
 
-                // Search
-                if ($propertyAccessor->isReadable($requestData, "[search]")) {
-                    $adapterQuery->setSearch($propertyAccessor->getValue($requestData, "[search]"));
+                // Filter
+                if ($propertyAccessor->isReadable($requestData, "[filter]")) {
+                    /** @var array $filters */
+                    $filters = $propertyAccessor->getValue($requestData, "[filter]");
+
+                    foreach ($filters as $filter) {
+                        if (is_array($filter)) {
+                            if (array_key_exists("columnName", $filter) && array_key_exists("value", $filter)) {
+                                $adapterQuery->addFilter(new Filter($filter["columnName"], $filter["value"]));
+                            }
+                        } else if (is_string($filter)) {
+                            [$columnName, $value] = explode("=", $filter);
+                            $adapterQuery->addFilter(new Filter($columnName, $value));
+                        }
+                    }
                 }
 
-                // Pagination
-                if ($propertyAccessor->isReadable($requestData, "[pagination]")) {
-                    $adapterQuery->setPagination(
-                        new Pagination(
-                            $propertyAccessor->getValue($requestData, "[pagination][page]"),
-                            $propertyAccessor->getValue($requestData, "[pagination][size]")
-                        )
-                    );
+                // Search
+                if ($propertyAccessor->isReadable($requestData, "[search]")) {
+                    $adapterQuery->setSearchQuery($propertyAccessor->getValue($requestData, "[search]"));
                 }
 
                 // Sort
@@ -397,6 +482,16 @@ class FetchTable {
                         new Sort(
                             $propertyAccessor->getValue($requestData, "[sort][column]"),
                             Direction::tryFrom($propertyAccessor->getValue($requestData, "[sort][direction]")) ?? Direction::ASC
+                        )
+                    );
+                }
+
+                // Pagination
+                if ($propertyAccessor->isReadable($requestData, "[pagination]")) {
+                    $adapterQuery->setPagination(
+                        new Pagination(
+                            $propertyAccessor->getValue($requestData, "[pagination][page]"),
+                            $propertyAccessor->getValue($requestData, "[pagination][size]")
                         )
                     );
                 }

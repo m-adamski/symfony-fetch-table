@@ -45,8 +45,9 @@ abstract class AbstractColumn {
         $configResolver->define("type")->allowedValues("text", "html")->default("text");
         $configResolver->define("label")->allowedTypes("string")->required();
         $configResolver->define("className")->allowedTypes("string", "null")->default(null);
-        $configResolver->define("sortable")->allowedTypes("bool")->default(false);
+        $configResolver->define("filterable")->allowedTypes("bool")->default(false);
         $configResolver->define("searchable")->allowedTypes("bool")->default(false);
+        $configResolver->define("sortable")->allowedTypes("bool")->default(false);
         $configResolver->define("mapped")->allowedTypes("bool")->default(true);
 
         // Validate custom config

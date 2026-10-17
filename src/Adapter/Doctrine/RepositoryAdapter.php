@@ -51,8 +51,30 @@ class RepositoryAdapter extends AbstractAdapter {
         // Find root alias from the QueryBuilder
         $rootAlias = $queryBuilder->getRootAliases()[0];
 
+        // Filtering
+        if (null !== ($filters = $query->getFilters()) && count($filters) > 0) {
+            $andX = $queryBuilder->expr()->andX();
+
+            foreach ($filters as $filter) {
+
+                // Check if the filter is applicable (column exists and is filterable)
+                if (array_any($columns, fn(AbstractColumn $column, string $name) => $name === $filter->getColumnName() && $column->getConfig("[filterable]"))) {
+                    $andX->add(
+                        $queryBuilder->expr()->eq(
+                            sprintf("%s.%s", $rootAlias, $filter->getColumnName()),
+                            sprintf(":filterColumn_%s_value", $filter->getColumnName())
+                        )
+                    );
+
+                    $queryBuilder->setParameter(sprintf("filterColumn_%s_value", $filter->getColumnName()), $filter->getValue());
+                }
+            }
+
+            $queryBuilder->andWhere($andX);
+        }
+
         // Searching
-        if (null !== ($searchContent = $query->getSearch())) {
+        if (null !== ($searchContent = $query->getSearchQuery())) {
             $orX = $queryBuilder->expr()->orX();
 
             foreach ($columns as $columnName => $column) {
@@ -70,7 +92,7 @@ class RepositoryAdapter extends AbstractAdapter {
             $sortColumnName = $sort->getColumn();
 
             /** @var AbstractColumn $sortColumn */
-            if (null !== ($sortColumn = $columns[$sortColumnName])) {
+            if (null !== ($sortColumn = $columns[$sortColumnName] ?? null)) {
                 if (true === $sortColumn->getConfig("[sortable]")) {
                     $queryBuilder->orderBy(sprintf("%s.%s", $rootAlias, $sort->getColumn()), $sort->getDirection()->value);
                 } else {

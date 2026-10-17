@@ -14,6 +14,7 @@ class AbstractColumnTest extends TestCase {
         "className"  => null,
         "sortable"   => false,
         "searchable" => false,
+        "filterable" => false,
         "mapped"     => true,
         "test"       => "testValue",
     ];

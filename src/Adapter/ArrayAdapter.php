@@ -17,8 +17,25 @@ class ArrayAdapter extends AbstractAdapter {
     public function fetchData(Query $query, TransformerInterface $transformer, array $columns, array $config): Result {
         $data = $this->config["data"];
 
+        // Filtering
+        if (null !== ($filters = $query->getFilters()) && count($filters) > 0) {
+            $result = $data;
+
+            foreach ($filters as $filter) {
+                if (array_any($columns, fn(AbstractColumn $column, string $name) => $name === $filter->getColumnName() && $column->getConfig("[filterable]"))) {
+
+                    $result = array_filter($result, function ($item) use ($filter) {
+                        return $item[$filter->getColumnName()] === $filter->getValue();
+                    });
+
+                }
+            }
+
+            $data = $result;
+        }
+
         // Searching
-        if (null !== ($searchContent = $query->getSearch())) {
+        if (null !== ($searchContent = $query->getSearchQuery())) {
             $result = [];
 
             /** @var AbstractColumn $column */
@@ -42,7 +59,7 @@ class ArrayAdapter extends AbstractAdapter {
             $sortColumnName = $sort->getColumn();
 
             /** @var AbstractColumn $sortColumn */
-            if (null !== ($sortColumn = $columns[$sortColumnName])) {
+            if (null !== ($sortColumn = $columns[$sortColumnName] ?? null)) {
                 if (true === $sortColumn->getConfig("[sortable]")) {
                     usort($data, function ($a, $b) use ($sort) {
                         $aValue = $a[$sort->getColumn()] ?? null;
