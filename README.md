@@ -1,262 +1,344 @@
 # Fetch Table Bundle for Symfony
 
-The Symfony bundle that integrates the lightweight [Fetch Table JS](https://github.com/m-adamski/fetch-table) library
-to handle remote data fetching and render responsive, accessible HTML tables.
+Fetch Table Bundle integrates the [Fetch Table JS](https://github.com/m-adamski/fetch-table) library with Symfony to
+handle server-side pagination, searching, sorting, and filtering for HTML tables.
+
+## Requirements
+
+- PHP 8.2 or higher
+- Symfony 6.4, 7.0 or higher
 
 ## Installation
 
-This bundle is available on Packagist and can be installed using Composer:
+Install the bundle using Composer:
 
-```shell
+```bash
 composer require m-adamski/symfony-fetch-table
 ```
 
-## How to use it?
-
-The library is designed to run within controller logic. It automatically generates configuration for the JS library and
-handles incoming HTTP requests.
+If you use Symfony Flex, the bundle is enabled automatically. Otherwise, register it in `config/bundles.php`:
 
 ```php
-public function __construct(
-    private readonly FetchTableFactory $fetchTableFactory,
-) {}
+return [
+    // ...
+    Adamski\Bundle\FetchTableBundle\FetchTableBundle::class => ['all' => true],
+];
+```
 
-#[Route("/", name: "index", methods: ["GET"])]
-public function index(Request $request): Response {
-    $table = $this->fetchTableFactory
-            ->create("#fetch-table", [
-                "ajaxURL"    => $this->generateUrl("index"),
-                "ajaxMethod" => "GET",
-                "components" => [
-                    "search"     => [
-                        "active" => true,
+## Quick Start
+
+### 1. Controller
+
+Create a table instance using `FetchTableFactory`, configure columns and an adapter, and handle the incoming request:
+
+```php
+namespace App\Controller;
+
+use Adamski\Bundle\FetchTableBundle\Adapter\Doctrine\RepositoryAdapter;
+use Adamski\Bundle\FetchTableBundle\Column\DateTimeColumn;
+use Adamski\Bundle\FetchTableBundle\Column\PropertyColumn;
+use Adamski\Bundle\FetchTableBundle\Column\TextColumn;
+use Adamski\Bundle\FetchTableBundle\Column\Twig\TwigColumn;
+use Adamski\Bundle\FetchTableBundle\FetchTableFactory;
+use App\Entity\Book;
+use App\Repository\BookRepository;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class BookController extends AbstractController {
+    public function __construct(
+        private readonly FetchTableFactory $fetchTableFactory,
+    ) {}
+
+    #[Route('/books', name: 'app_books', methods: ['GET'])]
+    public function index(Request $request): Response {
+        $table = $this->fetchTableFactory
+            ->create('#books-table', [
+                'ajaxURL'    => $this->generateUrl('app_books'),
+                'ajaxMethod' => 'GET',
+                'components' => [
+                    'search'     => ['active' => true],
+                    'pagination' => ['active' => true, 'pageSize' => 25],
+                    'filter'     => [
+                        'active'  => true,
+                        'filters' => [
+                            [
+                                'columnName' => 'status',
+                                'label'      => 'Status',
+                                'type'       => 'select',
+                                'values'     => ['available', 'borrowed'],
+                            ],
+                        ],
                     ],
-                    "pagination" => [
-                        "active"   => true,
-                    ]
-                ]
+                ],
             ])
-            ->addColumn("title", TextColumn::class, [
-                "label" => "Title",
-                "searchable" => true,
-                "sortable" => true
+            ->addColumn('title', TextColumn::class, [
+                'label'      => 'Title',
+                'searchable' => true,
+                'sortable'   => true,
             ])
-            ->addColumn("description", TextColumn::class, [
-                "label" => "Description",
-                "searchable" => true,
-                "sortable" => true
+            ->addColumn('author', PropertyColumn::class, [
+                'label'    => 'Author',
+                'property' => 'author.name',
+                'sortable' => true,
             ])
-            ->addColumn("author", PropertyColumn::class, [
-                "label"    => "Author",
-                "property" => "author",
-                "sortable" => true
+            ->addColumn('status', TextColumn::class, [
+                'label'      => 'Status',
+                'filterable' => true,
+                'sortable'   => true,
             ])
-            ->addColumn("createdAt", DateTimeColumn::class, [
-                "label"  => "Creation Date",
-                "format" => "d.m.Y H:i",
-                "sortable" => true
+            ->addColumn('createdAt', DateTimeColumn::class, [
+                'label'    => 'Created At',
+                'format'   => 'Y-m-d H:i',
+                'sortable' => true,
             ])
-            ->addColumn("options", TwigColumn::class, [
-                "label"    => "Options",
-                "mapped"   => false,
-                "expanded" => true,
-                "template" => "column/options.html.twig",
+            ->addColumn('actions', TwigColumn::class, [
+                'label'    => 'Actions',
+                'mapped'   => false,
+                'template' => 'book/_actions.html.twig',
             ])
             ->createAdapter(RepositoryAdapter::class, [
-                "entity"       => Book::class,
-                "queryBuilder" => function (BookRepository $bookRepository) {
-                    return $bookRepository->createQueryBuilder("book");
-                }
+                'entity'       => Book::class,
+                'queryBuilder' => function (BookRepository $repository) {
+                    return $repository->createQueryBuilder('book');
+                },
             ]);
 
-    if (null !== ($tableResponse = $table->handleRequest($request))) {
-        return $tableResponse;
-    }
+        if (null !== ($response = $table->handleRequest($request))) {
+            return $response;
+        }
 
-    return $this->render("index.html.twig", [
-        "table" => $table,
-    ]);
+        return $this->render('book/index.html.twig', [
+            'table' => $table,
+        ]);
+    }
 }
 ```
 
-## Documentation
+### 2. Twig Template
 
-Detailed documentation of the JS library can be found
-at [https://github.com/m-adamski/fetch-table](https://github.com/m-adamski/fetch-table).
+Render the table container and initialize Fetch Table JS using the `fetch_table_config` Twig function:
 
-### Columns Configuration
+```twig
+{% extends 'base.html.twig' %}
 
-The bundle provides a set of column types that can be used to process and render different types of data.
+{% block body %}
+<div id="books-table"></div>
+{% endblock %}
 
-All columns accept basic configuration parameters:
+{% block javascripts %}
+{{ parent () }}
+<script>
+const tableConfig = {{ fetch_table_config (table)|raw }};
+new FetchTable (tableConfig.selector, tableConfig.config);
+</script>
+{% endblock %}
+```
 
-- type (string, default: "text") - Column type
-- label (string, required) - Column label
-- className (string, optional) - CSS class name of the column
-- sortable (boolean, default: false) - Whether the column should be sortable
-- searchable (boolean, default: false) - Whether the column should be searchable
-- mapped (boolean, default: true) - Whether the column should be mapped to the data source
+## Columns
 
-#### TextColumn::class
+All column types inherit the following base options:
 
-Example:
+- `label` (string, required): Header text for the column.
+- `type` (string, default: "text"): Column type sent to the front-end library.
+- `className` (string, optional): CSS class added to the column cells.
+- `sortable` (bool, default: false): Enables column sorting.
+- `searchable` (bool, default: false): Includes the column in text search queries.
+- `filterable` (bool, default: false): Enables filtering for this column.
+- `mapped` (bool, default: true): Indicates whether the column is mapped to source data.
+
+### TextColumn
+
+Renders text values directly from the item.
 
 ```php
-->addColumn("title", TextColumn::class, [
-    "label" => "Title",
-    "searchable" => true,
-    "sortable" => true
+->addColumn('title', TextColumn::class, [
+    'label'      => 'Title',
+    'searchable' => true,
+    'sortable'   => true,
+    'filterable' => true,
 ])
 ```
 
-The column has no additional configuration parameters.
+### PropertyColumn
 
-#### PropertyColumn::class
+Retrieves nested entity or array properties using Symfony PropertyAccess syntax (e.g., `author.name`).
 
-Example:
+- `property` (string, required): Property path to access.
+- `defaultValue` (mixed, default: ""): Fallback value if the property is null or undefined.
+- `expanded` (bool, default: true): Passes the entire object/array to the transformer.
 
 ```php
-->addColumn("author", PropertyColumn::class, [
-    "label"    => "Author",
-    "property" => "author",
-    "sortable" => true
+->addColumn('author', PropertyColumn::class, [
+    'label'    => 'Author',
+    'property' => 'author.name',
+    'sortable' => true,
 ])
 ```
 
-- property (string, required) - Property name of the entity
-- defaultValue (string | int | float, default: "") - Default value if property is null or undefined
-- expanded (boolean, default: true) - Whether the column value should be expanded
+### DateTimeColumn
 
-#### DateTimeColumn::class
+Formats `\DateTimeInterface` objects.
 
-Example:
+- `format` (string, default: "Y-m-d H:i:s"): Date format string accepted by `date()`.
 
 ```php
-->addColumn("createdAt", DateTimeColumn::class, [
-    "label"  => "Creation Date",
-    "format" => "d/m/Y H:i",
-    "sortable" => true
+->addColumn('createdAt', DateTimeColumn::class, [
+    'label'  => 'Created At',
+    'format' => 'd.m.Y H:i',
 ])
 ```
 
-- format (string, default: "Y-m-d H:i:s") - Date format
+### CallableColumn
 
-#### CallableColumn::class
+Transforms column output using a custom PHP callback.
 
-Example:
+- `callable` (callable, required): Callback receiving the column value (or the full entity if `expanded` is true).
+- `expanded` (bool, default: false): Whether to pass the entire entity/row to the callback.
 
 ```php
-->addColumn("description", CallableColumn::class, [
-    "label"      => "Email Address",
-    "callable"   => function (string $description) {
-        return "Description: $description";
+->addColumn('price', CallableColumn::class, [
+    'label'    => 'Price',
+    'callable' => function ($price) {
+        return number_format($price / 100, 2) . ' USD';
     },
-    "searchable" => true,
-    "sortable"   => true
 ])
 ```
 
+### TwigColumn
+
+Renders a Twig template for each row (requires `symfony/twig-bundle`).
+
+- `template` (string, required): Twig template path.
+- `expanded` (bool, default: false): Passes the entire entity/row as `value` to the template.
+
 ```php
-->addColumn("description", CallableColumn::class, [
-    "label"      => "Email Address",
-    "callable"   => function (Book $book) {
-        return "Description: " . $book->getDescription();
-    },
-    "expanded"   => true,
-    "searchable" => true,
-    "sortable"   => true
+->addColumn('actions', TwigColumn::class, [
+    'label'    => 'Actions',
+    'mapped'   => false,
+    'template' => 'book/_actions.html.twig',
 ])
 ```
 
-- callable (callable, required) - Callable that accepts the column value and returns the rendered value
-- expanded (boolean, default: false) - Whether the column value should be expanded
+Inside your Twig template:
 
-### Adapters Configuration
-
-The bundle provides a set of adapters that can be used to fetch data from different sources.
-
-#### ArrayAdapter::class
-
-The adapter expects a table of data as a configuration parameter and handles all search, sorting, and pagination
-functionality internally.
-
-Example:
-
-```php
-->createAdapter(ArrayAdapter::class, [
-    "data" => [
-        ["name" => "John Doe", "emailAddress" => "test@example.com"],
-        ["name" => "Jane Smith", "emailAddress" => "jane.smith@example.com"],
-        ["name" => "Michael Brown", "emailAddress" => "michael.brown@example.com"],
-        ["name" => "Emily Davis", "emailAddress" => "emily.davis@example.com"],
-        ["name" => "David Wilson", "emailAddress" => "david.wilson@example.com"],
-        ["name" => "Sarah Johnson", "emailAddress" => "sarah.johnson@example.com"],
-    ]
-]);
+```twig
+<a href="{{ path('book_edit', {id: value.id}) }}">Edit</a>
 ```
 
-- data (array, required) - Array of data
+## Adapters
 
-#### CallableAdapter::class
+Adapters connect FetchTable with your data storage.
 
-The only configuration parameter for this adapter is a function that will be called when the data is rendered. We must
-provide support for searching, sorting, and pagination within this function.
+### RepositoryAdapter
 
-Example:
+Uses Doctrine ORM QueryBuilder for database queries (requires `symfony/orm-pack`). Automatically applies sorting,
+filtering, searching, and pagination to the QueryBuilder.
 
-```php
-->createAdapter(CallableAdapter::class, [
-    "callable" => function (Query $query, $transformer, $columns, $config) {
-
-        // Searching
-        if (null !== ($searchContent = $query->getSearch())) {
-            // ...
-        }
-
-        // Sorting
-        if (null !== ($sort = $query->getSort())) {
-            // ...
-        }
-
-        // Pagination
-        if (null !== ($pagination = $query->getPagination())) {
-            // ...
-        }
-
-        return (new Result())->setData(
-            $transformer->transform([
-                ["title" => "Title 1", "author" => "Author 1", "createdAt" => new \DateTime()],
-                ["title" => "Title 2", "author" => "Author 2", "createdAt" => new \DateTime()],
-            ], $columns)
-        );
-    }
-]);
-```
-
-- callable (callable, required) - Callable that accepts the query, transformer, columns, and config and returns the
-  result
-
-#### RepositoryAdapter::class
-
-To use this adapter, you need to install the symfony/orm-pack package. The adapter handles search, sorting, and
-pagination functionality internally.
-
-Example:
+- `entity` (string, required): Entity class name.
+- `queryBuilder` (callable, required): Callback accepting the entity repository and returning a
+  `Doctrine\ORM\QueryBuilder` instance (or a `Result` instance).
 
 ```php
+use Adamski\Bundle\FetchTableBundle\Adapter\Doctrine\RepositoryAdapter;
+
 ->createAdapter(RepositoryAdapter::class, [
-    "entity"       => Book::class,
-    "queryBuilder" => function (BookRepository $bookRepository) {
-        return $bookRepository->createQueryBuilder("book");
-    }
-]);
+    'entity'       => Book::class,
+    'queryBuilder' => function (BookRepository $repository) {
+        return $repository->createQueryBuilder('b')
+            ->leftJoin('b.category', 'c')
+            ->addSelect('c');
+    },
+])
 ```
 
-- entity (string, required) - Entity class name
-- queryBuilder (callable, required) - Callable that accepts the entity repository and returns the query builder (if
-  there is a need to bypass the internal functionality of the adapter (search, sorting, and pagination), the function
-  can return the result immediately)
+### ArrayAdapter
+
+Fetches and manipulates data from an in-memory PHP array.
+
+- `data` (array, required): Array of records.
+
+```php
+use Adamski\Bundle\FetchTableBundle\Adapter\ArrayAdapter;
+
+->createAdapter(ArrayAdapter::class, [
+    'data' => [
+        ['id' => 1, 'name' => 'Item 1', 'status' => 'active'],
+        ['id' => 2, 'name' => 'Item 2', 'status' => 'inactive'],
+    ],
+])
+```
+
+### CallableAdapter
+
+Gives full control over data fetching via a custom callback.
+
+- `callable` (callable, required): Callback receiving
+  `(Query $query, TransformerInterface $transformer, array $columns, array $config)`.
+
+```php
+use Adamski\Bundle\FetchTableBundle\Adapter\CallableAdapter;
+use Adamski\Bundle\FetchTableBundle\Model\Query;
+use Adamski\Bundle\FetchTableBundle\Model\Result;
+
+->createAdapter(CallableAdapter::class, [
+    'callable' => function (Query $query, $transformer, $columns, $config) {
+        $data = [
+            ['title' => 'Book A', 'status' => 'active'],
+            ['title' => 'Book B', 'status' => 'inactive'],
+        ];
+
+        return (new Result())
+            ->setData($transformer->transform($data, $columns))
+            ->setTotalRecords(count($data));
+    },
+])
+```
+
+## Table Configuration
+
+The second argument of `FetchTableFactory::create()` accepts table options:
+
+```php
+$table = $this->fetchTableFactory->create('#table-id', [
+    'ajaxURL'     => '/api/books',
+    'ajaxMethod'  => 'GET', // 'GET' or 'POST'
+    'ajaxHeaders' => [
+        'Content-Type'     => 'application/json',
+        'X-Requested-With' => 'XMLHttpRequest',
+    ],
+    'debug'       => false,
+    'components'  => [
+        'search'     => [
+            'active' => true,
+        ],
+        'pagination' => [
+            'active'         => true,
+            'pageSize'       => 25,
+            'availableSizes' => [10, 25, 50, 100],
+            'style'          => 'standard', // 'standard' or 'simple'
+            'description'    => [
+                'active' => true,
+            ],
+        ],
+        'filter'     => [
+            'active'   => true,
+            'allLabel' => 'All',
+            'filters'  => [
+                [
+                    'columnName' => 'status',
+                    'label'      => 'Status',
+                    'type'       => 'select', // 'select' or 'button'
+                    'values'     => ['active', 'inactive'],
+                ],
+            ],
+        ],
+    ],
+]);
+```
 
 ## License
 
-This project is open source and available for personal and commercial use under the MIT License.
+This bundle is open source software licensed under the MIT License.
