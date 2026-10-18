@@ -173,6 +173,7 @@ class FetchTable {
                 // Elements > Pagination > Container
                 $resolver->define("container")->options(function (OptionsResolver $resolver) {
                     $resolver->define("className")->allowedTypes("string");
+                    $resolver->define("querySelector")->allowedTypes("string");
                     $resolver->define("attributes")->allowedTypes("array");
                 });
 
@@ -207,6 +208,7 @@ class FetchTable {
                 $resolver->define("sizeSelector")->options(function (OptionsResolver $resolver) {
                     $resolver->define("container")->options(function (OptionsResolver $resolver) {
                         $resolver->define("className")->allowedTypes("string");
+                        $resolver->define("querySelector")->allowedTypes("string");
                         $resolver->define("attributes")->allowedTypes("array");
                     });
                     $resolver->define("select")->options(function (OptionsResolver $resolver) {
@@ -223,6 +225,7 @@ class FetchTable {
                 $resolver->define("description")->options(function (OptionsResolver $resolver) {
                     $resolver->define("container")->options(function (OptionsResolver $resolver) {
                         $resolver->define("className")->allowedTypes("string");
+                        $resolver->define("querySelector")->allowedTypes("string");
                         $resolver->define("attributes")->allowedTypes("array");
                     });
                 });
@@ -232,6 +235,7 @@ class FetchTable {
             $resolver->define("search")->options(function (OptionsResolver $resolver) {
                 $resolver->define("container")->options(function (OptionsResolver $resolver) {
                     $resolver->define("className")->allowedTypes("string");
+                    $resolver->define("querySelector")->allowedTypes("string");
                     $resolver->define("attributes")->allowedTypes("array");
                 });
                 $resolver->define("input")->options(function (OptionsResolver $resolver) {
@@ -244,6 +248,7 @@ class FetchTable {
             $resolver->define("filter")->options(function (OptionsResolver $resolver) {
                 $resolver->define("container")->options(function (OptionsResolver $resolver) {
                     $resolver->define("className")->allowedTypes("string");
+                    $resolver->define("querySelector")->allowedTypes("string");
                     $resolver->define("attributes")->allowedTypes("array");
                 });
                 $resolver->define("item")->options(function (OptionsResolver $resolver) {
